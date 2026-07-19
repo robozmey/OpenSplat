@@ -102,7 +102,8 @@ if(GPU_RUNTIME STREQUAL "CUDA")
         endif()
         if(NOT OPENSPLAT_MAX_CUDA_COMPATIBILITY)
             if(NOT CMAKE_CUDA_ARCHITECTURES)
-                SET(CMAKE_CUDA_ARCHITECTURES 70;75;80)
+                # CUDA 13+ no longer supports compute_70 by default.
+                SET(CMAKE_CUDA_ARCHITECTURES 75;80)
             endif()
         else()
             # Build for maximum compatibility
