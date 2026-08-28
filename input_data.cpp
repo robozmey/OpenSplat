@@ -94,6 +94,28 @@ void Camera::loadImage(float downscaleFactor){
     fy = K[1][1].item<float>();
     cx = K[0][2].item<float>();
     cy = K[1][2].item<float>();
+
+    // Render loading
+    if (fileRenderPath != "") {
+        cv::Rect renderRoi;
+        cv::Mat cRenderImg = imreadRGB(fileRenderPath);
+
+        // TODO rescale
+        if (cRenderImg.rows != height || cRenderImg.cols != width){
+            return;
+        }
+
+        // TODO undistort on render
+        if (hasDistortionParameters()){
+            return;
+        } else {
+            renderRoi = cv::Rect(0, 0, cRenderImg.cols, cRenderImg.rows);
+            renderImage = imageToTensor(cRenderImg);
+        }
+        
+        // Crop to ROI
+        renderImage = renderImage.index({Slice(renderRoi.y, renderRoi.y + renderRoi.height), Slice(renderRoi.x, renderRoi.x + renderRoi.width), Slice()});
+    }
 }
 
 torch::Tensor Camera::getImage(int downscaleFactor){
@@ -112,6 +134,26 @@ torch::Tensor Camera::getImage(int downscaleFactor){
         cv::resize(cImg, cImg, cv::Size(cImg.cols / downscaleFactor, cImg.rows / downscaleFactor), 0.0, 0.0, cv::INTER_AREA);
         torch::Tensor t = imageToTensor(cImg);
         imagePyramids[downscaleFactor] = t;
+        return t;
+    }
+}
+
+torch::Tensor Camera::getRenderImage(int downscaleFactor){
+    if (downscaleFactor <= 1) return renderImage;
+    else{
+
+        // torch::jit::script::Module container = torch::jit::load("gt.pt");
+        // return container.attr("val").toTensor();
+
+        if (renderImagePyramids.find(downscaleFactor) != renderImagePyramids.end()){
+            return renderImagePyramids[downscaleFactor];
+        }
+
+        // Rescale, store and return
+        cv::Mat cRenderImg = tensorToImage(renderImage);
+        cv::resize(cRenderImg, cRenderImg, cv::Size(cRenderImg.cols / downscaleFactor, cRenderImg.rows / downscaleFactor), 0.0, 0.0, cv::INTER_AREA);
+        torch::Tensor t = imageToTensor(cRenderImg);
+        renderImagePyramids[downscaleFactor] = t;
         return t;
     }
 }
