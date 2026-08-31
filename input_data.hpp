@@ -25,6 +25,7 @@ struct Camera{
     torch::Tensor camToWorld;
     std::string filePath = "";
     std::string fileRenderPath = "";
+    std::string fileMaskPath = "";
     CameraType cameraType = CameraType::Perspective;
 
     Camera(){};
@@ -39,15 +40,18 @@ struct Camera{
     std::vector<float> undistortionParameters();
     torch::Tensor getImage(int downscaleFactor);
     torch::Tensor getRenderImage(int downscaleFactor);
+    torch::Tensor getMask(int downscaleFactor);
 
     void loadImage(float downscaleFactor);
     void loadRenderImage(float downscaleFactor);
     torch::Tensor K;
     torch::Tensor image;
     torch::Tensor renderImage;
+    torch::Tensor mask;
 
     std::unordered_map<int, torch::Tensor> imagePyramids;
     std::unordered_map<int, torch::Tensor> renderImagePyramids;
+    std::unordered_map<int, torch::Tensor> maskPyramids;
 };
 
 struct Points{

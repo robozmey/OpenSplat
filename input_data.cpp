@@ -115,6 +115,11 @@ void Camera::loadImage(float downscaleFactor){
         
         // Crop to ROI
         renderImage = renderImage.index({Slice(renderRoi.y, renderRoi.y + renderRoi.height), Slice(renderRoi.x, renderRoi.x + renderRoi.width), Slice()});
+
+        // Create mask based on difference between render and image
+        torch::Tensor diff = torch::abs(renderImage - image);
+        torch::Tensor diffGray = diff.mean(-1, true); // [H,W,1]
+        mask = torch::clamp((diffGray - 0.05f) / 0.25f, 0.0f, 1.0f);
     }
 }
 
@@ -154,6 +159,26 @@ torch::Tensor Camera::getRenderImage(int downscaleFactor){
         cv::resize(cRenderImg, cRenderImg, cv::Size(cRenderImg.cols / downscaleFactor, cRenderImg.rows / downscaleFactor), 0.0, 0.0, cv::INTER_AREA);
         torch::Tensor t = imageToTensor(cRenderImg);
         renderImagePyramids[downscaleFactor] = t;
+        return t;
+    }
+}
+
+torch::Tensor Camera::getMask(int downscaleFactor){
+    if (downscaleFactor <= 1) return mask;
+    else{
+
+        // torch::jit::script::Module container = torch::jit::load("gt.pt");
+        // return container.attr("val").toTensor();
+
+        if (maskPyramids.find(downscaleFactor) != maskPyramids.end()){
+            return maskPyramids[downscaleFactor];
+        }
+
+        // Rescale, store and return
+        cv::Mat cMask = tensorToImage(mask);
+        cv::resize(cMask, cMask, cv::Size(cMask.cols / downscaleFactor, cMask.rows / downscaleFactor), 0.0, 0.0, cv::INTER_AREA);
+        torch::Tensor t = imageToTensor(cMask);
+        maskPyramids[downscaleFactor] = t;
         return t;
     }
 }
