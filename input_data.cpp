@@ -103,17 +103,29 @@ void Camera::loadImage(float downscaleFactor){
 
         // TODO rescale
         if (cRenderImg.rows != height || cRenderImg.cols != width){
-            throw std::runtime_error("TODO mask rescale");
+            if (downscaleFactor > 1.0f){
+                float scaleFactor = 1.0f / downscaleFactor;
+                cv::resize(cRenderImg, cRenderImg, cv::Size(), scaleFactor, scaleFactor, cv::INTER_AREA);
+            }
         }
 
         // TODO undistort on render
         if (hasDistortionParameters()){
-            throw std::runtime_error("TODO mask distortion");
+            std::vector<float> distCoeffs = undistortionParameters();
+            cv::Mat cK = floatNxNtensorToMat(K);
+            // Doubled K undistortion but needed to get renderRoi
+            cv::Mat newK = cv::getOptimalNewCameraMatrix(cK, distCoeffs, cv::Size(cRenderImg.cols, cRenderImg.rows), 0, cv::Size(), &renderRoi);
+
+            cv::Mat undistorted = cv::Mat::zeros(cRenderImg.rows, cRenderImg.cols, cRenderImg.type());
+            // Not
+            cv::undistort(cRenderImg, undistorted, cK, distCoeffs, newK);
+
+            renderImage = imageToTensor(undistorted);
         } else {
             renderRoi = cv::Rect(0, 0, cRenderImg.cols, cRenderImg.rows);
             renderImage = imageToTensor(cRenderImg);
         }
-        
+
         // Crop to ROI
         renderImage = renderImage.index({Slice(renderRoi.y, renderRoi.y + renderRoi.height), Slice(renderRoi.x, renderRoi.x + renderRoi.width), Slice()});
 
@@ -170,6 +182,7 @@ torch::Tensor Camera::getMask(int downscaleFactor){
     if (downscaleFactor <= 1) return mask;
     else{
 
+        throw std::runtime_error("TODO mask downscale");
         // torch::jit::script::Module container = torch::jit::load("gt.pt");
         // return container.attr("val").toTensor();
 
