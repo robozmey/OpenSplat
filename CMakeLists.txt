@@ -102,8 +102,7 @@ if(GPU_RUNTIME STREQUAL "CUDA")
         endif()
         if(NOT OPENSPLAT_MAX_CUDA_COMPATIBILITY)
             if(NOT CMAKE_CUDA_ARCHITECTURES)
-                # CUDA 13+ no longer supports compute_70 by default.
-                SET(CMAKE_CUDA_ARCHITECTURES 75;80)
+                SET(CMAKE_CUDA_ARCHITECTURES 61;75;80)
             endif()
         else()
             # Build for maximum compatibility
@@ -203,7 +202,7 @@ endif()
 if (NOT WIN32 AND NOT APPLE)
     set(CMAKE_CUDA_COMPILER "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc")
 endif()
-set(OpenCV_LIBS opencv_core opencv_imgproc opencv_highgui opencv_calib3d)
+set(OpenCV_LIBS opencv_core opencv_imgproc opencv_imgcodecs opencv_highgui opencv_calib3d)
 
 set(GSPLAT_LIBS gsplat_cpu)
 if((GPU_RUNTIME STREQUAL "CUDA") OR (GPU_RUNTIME STREQUAL "HIP"))
