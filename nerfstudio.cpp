@@ -125,7 +125,7 @@ torch::Tensor posesFromTransforms(const Transforms &t){
     return poses;
 }
 
-InputData inputDataFromNerfStudio(const std::string &projectRoot){
+InputData inputDataFromNerfStudio(const std::string &projectRoot, bool hasRenders){
     InputData ret;
     fs::path nsRoot(projectRoot);
     fs::path transformsPath = nsRoot / "transforms.json";
@@ -147,7 +147,17 @@ InputData inputDataFromNerfStudio(const std::string &projectRoot){
     for (size_t i = 0; i < t.frames.size(); i++){
         Frame f = t.frames[i];
 
-        ret.cameras.emplace_back(Camera(f.width, f.height, 
+        if (hasRenders) 
+            ret.cameras.emplace_back(Camera(f.width, f.height, 
+                            static_cast<float>(f.fx), static_cast<float>(f.fy), 
+                            static_cast<float>(f.cx), static_cast<float>(f.cy), 
+                            static_cast<float>(f.k1), static_cast<float>(f.k2), static_cast<float>(f.k3), 
+                            static_cast<float>(f.p1), static_cast<float>(f.p2),  
+                            
+                            poses[i], (nsRoot / f.filePath).string(), 
+                                      (nsRoot / "rendered" / f.filePath).string()));
+        else
+            ret.cameras.emplace_back(Camera(f.width, f.height, 
                             static_cast<float>(f.fx), static_cast<float>(f.fy), 
                             static_cast<float>(f.cx), static_cast<float>(f.cy), 
                             static_cast<float>(f.k1), static_cast<float>(f.k2), static_cast<float>(f.k3), 

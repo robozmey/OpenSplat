@@ -7,7 +7,7 @@ namespace fs = std::filesystem;
 using namespace torch::indexing;
 using json = nlohmann::json;
 
-namespace ns{ InputData inputDataFromNerfStudio(const std::string &projectRoot); }
+namespace ns{ InputData inputDataFromNerfStudio(const std::string &projectRoot, bool hasRenders); }
 namespace cm{ InputData inputDataFromColmap(const std::string &projectRoot, const std::string& imageSourcePath); }
 namespace osfm { InputData inputDataFromOpenSfM(const std::string &projectRoot); }
 namespace omvg { InputData inputDataFromOpenMVG(const std::string &projectRoot); }
@@ -16,7 +16,7 @@ InputData inputDataFromX(const std::string &projectRoot, const std::string& colm
     fs::path root(projectRoot);
 
     if (fs::exists(root / "transforms.json")){
-        return ns::inputDataFromNerfStudio(projectRoot);
+        return ns::inputDataFromNerfStudio(projectRoot, fs::exists(root / "rendered"));
     }else if (fs::exists(root / "sparse") || fs::exists(root / "cameras.bin")){
         return cm::inputDataFromColmap(projectRoot, colmapImageSourcePath);
     }else if (fs::exists(root / "reconstruction.json")){
@@ -97,17 +97,18 @@ void Camera::loadImage(float downscaleFactor){
 
     // Render loading
     if (fileRenderPath != "") {
+        std::cout << "Loading " << fileRenderPath << std::endl;
         cv::Rect renderRoi;
         cv::Mat cRenderImg = imreadRGB(fileRenderPath);
 
         // TODO rescale
         if (cRenderImg.rows != height || cRenderImg.cols != width){
-            return;
+            throw std::runtime_error("TODO mask rescale");
         }
 
         // TODO undistort on render
         if (hasDistortionParameters()){
-            return;
+            throw std::runtime_error("TODO mask distortion");
         } else {
             renderRoi = cv::Rect(0, 0, cRenderImg.cols, cRenderImg.rows);
             renderImage = imageToTensor(cRenderImg);
@@ -120,6 +121,8 @@ void Camera::loadImage(float downscaleFactor){
         torch::Tensor diff = torch::abs(renderImage - image);
         torch::Tensor diffGray = diff.mean(-1, true); // [H,W,1]
         mask = torch::clamp((diffGray - 0.05f) / 0.25f, 0.0f, 1.0f);
+    } else {
+        mask = torch::ones({height, width, 1}, torch::TensorOptions().dtype(torch::kFloat32));
     }
 }
 
