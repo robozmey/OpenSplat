@@ -178,11 +178,31 @@ torch::Tensor Camera::getRenderImage(int downscaleFactor){
     }
 }
 
+cv::Mat tensorToMaskImage(const torch::Tensor &t){
+    int h = t.sizes()[0];
+    int w = t.sizes()[1];
+    int c = t.sizes()[2];
+
+    int type = CV_8UC1;
+    if (c != 1) throw std::runtime_error("Only masks with 1 channels are supported");
+
+    cv::Mat image(h, w, type);
+    torch::Tensor scaledTensor = (t * 255.0).toType(torch::kU8);
+    uint8_t* dataPtr = static_cast<uint8_t*>(scaledTensor.data_ptr());
+    std::copy(dataPtr, dataPtr + (w * h * c), image.data);
+
+    return image;
+}
+
+torch::Tensor maskImageToTensor(const cv::Mat &image){
+    torch::Tensor img = torch::from_blob(image.data, { image.rows, image.cols, image.dims + 1 }, torch::kU8);
+    return (img.toType(torch::kFloat32) / 255.0f);
+}
+
 torch::Tensor Camera::getMask(int downscaleFactor){
     if (downscaleFactor <= 1) return mask;
     else{
 
-        throw std::runtime_error("TODO mask downscale");
         // torch::jit::script::Module container = torch::jit::load("gt.pt");
         // return container.attr("val").toTensor();
 
@@ -191,9 +211,9 @@ torch::Tensor Camera::getMask(int downscaleFactor){
         }
 
         // Rescale, store and return
-        cv::Mat cMask = tensorToImage(mask);
+        cv::Mat cMask = tensorToMaskImage(mask);
         cv::resize(cMask, cMask, cv::Size(cMask.cols / downscaleFactor, cMask.rows / downscaleFactor), 0.0, 0.0, cv::INTER_AREA);
-        torch::Tensor t = imageToTensor(cMask);
+        torch::Tensor t = maskImageToTensor(cMask);
         maskPyramids[downscaleFactor] = t;
         return t;
     }
