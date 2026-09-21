@@ -55,6 +55,10 @@ torch::Tensor l1(const torch::Tensor& rendered, const torch::Tensor& gt){
     return torch::abs(gt - rendered).mean();
 }
 
+torch::Tensor l1_masked(const torch::Tensor& rendered, const torch::Tensor& gt, const torch::Tensor& mask){
+    return torch::abs((gt - rendered)*mask).mean();
+}
+
 void Model::setupOptimizers(){
     releaseOptimizers();
 
@@ -779,6 +783,15 @@ int Model::loadPly(const std::string &filename){
 
 torch::Tensor Model::mainLoss(torch::Tensor &rgb, torch::Tensor &gt, float ssimWeight, torch::Tensor &mask){
     torch::Tensor ssimLoss = 1.0f - ssim.eval(rgb, gt);
-    torch::Tensor l1Loss = l1(rgb, gt);
+    torch::Tensor l1Loss;
+    
+    // TODO Add use mask flag
+    //if (true) {
+    l1Loss = l1_masked(rgb, gt, mask);
+    // } else {
+    //     l1loss = l1(rgb, gt);
+    // }
+
+
     return (1.0f - ssimWeight) * l1Loss + ssimWeight * ssimLoss;
 }
