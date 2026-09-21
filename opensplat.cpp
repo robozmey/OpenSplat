@@ -181,6 +181,12 @@ int main(int argc, char *argv[]){
                 cv::Mat image = tensorToImage(rgb.detach().cpu());
                 cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
                 cv::imwrite((fs::path(valRender) / (std::to_string(step) + ".png")).string(), image);
+
+                if (step == 10) {
+                    torch::Tensor mask = valCam->getMask(model.getDownscaleFactor(step));
+                    cv::Mat detached_mask = tensorToImage(mask.detach().cpu());
+                    cv::imwrite((fs::path(valRender) / (std::to_string(step) + "_mask.png")).string(), detached_mask);
+                }
             }
 
 #ifdef USE_VISUALIZATION
