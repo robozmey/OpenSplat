@@ -45,6 +45,8 @@ int main(int argc, char *argv[]){
 #ifdef USE_VISUALIZATION
         ("has-visualization", "Show the visualization steps of training", cxxopts::value<bool>()->default_value("0"))
 #endif
+        ("mask-diff-min", "Minimum difference for mask generation", cxxopts::value<float>()->default_value("0.05"))
+        ("mask-diff-range", "Range of difference for mask generation", cxxopts::value<float>()->default_value("0.25"))
 
         ("h,help", "Print usage")
         ("version", "Print version")
@@ -98,6 +100,8 @@ int main(int argc, char *argv[]){
 #ifdef USE_VISUALIZATION
     const bool hasVisualization = result["has-visualization"].as<bool>();
 #endif
+    const float maskDiffMin = result["mask-diff-min"].as<float>();
+    const float maskDiffRange = result["mask-diff-range"].as<float>();
     torch::Device device = torch::kCPU;
     int displayStep = 10;
 
@@ -121,8 +125,8 @@ int main(int argc, char *argv[]){
     try{
         InputData inputData = inputDataFromX(projectRoot, colmapImageSourcePath);
 
-        parallel_for(inputData.cameras.begin(), inputData.cameras.end(), [&downScaleFactor](Camera &cam){
-            cam.loadImage(downScaleFactor);
+        parallel_for(inputData.cameras.begin(), inputData.cameras.end(), [&downScaleFactor, &maskDiffMin, &maskDiffRange](Camera &cam){
+            cam.loadImage(downScaleFactor, maskDiffMin, maskDiffRange);
         });
 
         // Withhold a validation camera if necessary
