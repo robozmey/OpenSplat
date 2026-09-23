@@ -188,7 +188,14 @@ int main(int argc, char *argv[]){
 
                 if (step == 10) {
                     torch::Tensor mask = valCam->getMask(model.getDownscaleFactor(step));
-                    cv::Mat detached_mask = tensorToImage(mask.detach().cpu());
+                    torch::Tensor maskCpu = mask.detach().cpu().squeeze(-1) * 255.0f;
+                    cv::Mat detached_mask(
+                        maskCpu.size(0),
+                        maskCpu.size(1),
+                        CV_32FC1,
+                        maskCpu.data_ptr<float>()
+                    );
+                    detached_mask.convertTo(detached_mask, CV_8UC1);
                     cv::imwrite((fs::path(valRender) / (std::to_string(step) + "_mask.png")).string(), detached_mask);
                 }
             }
