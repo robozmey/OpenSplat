@@ -130,9 +130,15 @@ void Camera::loadImage(float downscaleFactor){
         renderImage = renderImage.index({Slice(renderRoi.y, renderRoi.y + renderRoi.height), Slice(renderRoi.x, renderRoi.x + renderRoi.width), Slice()});
 
         // Create mask based on difference between render and image
+        float MASK_DIFF_MIN = 0.05f;
+        float MASK_DIFF_RANGE = 0.25f;
         torch::Tensor diff = torch::abs(renderImage - image);
         torch::Tensor diffGray = diff.mean(-1, true); // [H,W,1]
-        mask = torch::clamp((diffGray - 0.05f) / 0.25f, 0.0f, 1.0f);
+        mask = torch::clamp((diffGray - MASK_DIFF_MIN) / MASK_DIFF_RANGE, 0.0f, 1.0f);
+
+        // Ignore black pixels in render image
+        torch::Tensor blackPixels = torch::all(renderImage == 0.0f, -1, true);
+        mask = torch::where(blackPixels, torch::zeros_like(mask), mask);
     } else {
         mask = torch::ones({height, width, 1}, torch::TensorOptions().dtype(torch::kFloat32));
     }
