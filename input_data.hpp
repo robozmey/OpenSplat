@@ -48,7 +48,6 @@ struct Camera{
     torch::Tensor getMask(int downscaleFactor);
 
     void loadImage(float downscaleFactor, float maskDiffMin, float maskDiffRange);
-    void loadRenderImage(float downscaleFactor);
     torch::Tensor K;
     torch::Tensor image;
     torch::Tensor renderImage;
