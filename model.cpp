@@ -55,8 +55,13 @@ torch::Tensor l1(const torch::Tensor& rendered, const torch::Tensor& gt){
     return torch::abs(gt - rendered).mean();
 }
 
-torch::Tensor l1_masked(const torch::Tensor& rendered, const torch::Tensor& gt, const torch::Tensor& mask){
+torch::Tensor l1_only_masked(const torch::Tensor& rendered, const torch::Tensor& gt, const torch::Tensor& mask){
     return torch::abs((gt - rendered)*mask).mean();
+}
+
+torch::Tensor l1_masked(const torch::Tensor& rendered, const torch::Tensor& gt, const torch::Tensor& mask, const torch::Tensor& backgroundColor){
+    torch::Tensor target = torch::where(mask > 0.5f, gt, backgroundColor);
+    return torch::abs(target - rendered).mean();
 }
 
 void Model::setupOptimizers(){
@@ -787,7 +792,7 @@ torch::Tensor Model::mainLoss(torch::Tensor &rgb, torch::Tensor &gt, float ssimW
     
     // TODO Add use mask flag
     //if (true) {
-    l1Loss = l1_masked(rgb, gt, mask);
+    l1Loss = l1_masked(rgb, gt, mask, backgroundColor);
     // } else {
     //     l1loss = l1(rgb, gt);
     // }
