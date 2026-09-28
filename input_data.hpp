@@ -46,16 +46,19 @@ struct Camera{
     torch::Tensor getImage(int downscaleFactor);
     torch::Tensor getRenderImage(int downscaleFactor);
     torch::Tensor getMask(int downscaleFactor);
+    torch::Tensor getTargetImage(int downscaleFactor);
 
     void loadImage(float downscaleFactor, float maskDiffMin, float maskDiffRange);
     torch::Tensor K;
     torch::Tensor image;
     torch::Tensor renderImage;
     torch::Tensor mask;
+    torch::Tensor targetImage;
 
     std::unordered_map<int, torch::Tensor> imagePyramids;
     std::unordered_map<int, torch::Tensor> renderImagePyramids;
     std::unordered_map<int, torch::Tensor> maskPyramids;
+    std::unordered_map<int, torch::Tensor> targetImagePyramids;
 };
 
 struct Points{

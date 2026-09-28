@@ -141,8 +141,12 @@ void Camera::loadImage(float downscaleFactor, float maskDiffMin, float maskDiffR
         // Ignore black pixels in render image
         torch::Tensor blackPixels = torch::all(renderImage == 0.0f, -1, true);
         mask = torch::where(blackPixels, torch::zeros_like(mask), mask);
+
+        // TODO use model's background color instead of hardcoded
+        targetImage = torch::where(mask > 0.5f, image, torch::tensor({0.6130f, 0.0101f, 0.3984f}));
     } else {
         mask = torch::ones({height, width, 1}, torch::TensorOptions().dtype(torch::kFloat32));
+        targetImage = image.clone();
     }
 }
 
@@ -223,6 +227,26 @@ torch::Tensor Camera::getMask(int downscaleFactor){
         cv::resize(cMask, cMask, cv::Size(cMask.cols / downscaleFactor, cMask.rows / downscaleFactor), 0.0, 0.0, cv::INTER_AREA);
         torch::Tensor t = maskImageToTensor(cMask);
         maskPyramids[downscaleFactor] = t;
+        return t;
+    }
+}
+
+torch::Tensor Camera::getTargetImage(int downscaleFactor){
+    if (downscaleFactor <= 1) return targetImage;
+    else{
+
+        // torch::jit::script::Module container = torch::jit::load("gt.pt");
+        // return container.attr("val").toTensor();
+
+        if (targetImagePyramids.find(downscaleFactor) != targetImagePyramids.end()){
+            return targetImagePyramids[downscaleFactor];
+        }
+
+        // Rescale, store and return
+        cv::Mat cImg = tensorToImage(targetImage);
+        cv::resize(cImg, cImg, cv::Size(cImg.cols / downscaleFactor, cImg.rows / downscaleFactor), 0.0, 0.0, cv::INTER_AREA);
+        torch::Tensor t = imageToTensor(cImg);
+        targetImagePyramids[downscaleFactor] = t;
         return t;
     }
 }

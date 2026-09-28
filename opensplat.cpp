@@ -158,12 +158,14 @@ int main(int argc, char *argv[]){
             model.optimizersZeroGrad();
 
             torch::Tensor rgb = model.forward(cam, step);
-            torch::Tensor gt = cam.getImage(model.getDownscaleFactor(step));
-            torch::Tensor mask = cam.getMask(model.getDownscaleFactor(step));
-            gt = gt.to(device);
-            mask = mask.to(device);
+            // torch::Tensor gt = cam.getImage(model.getDownscaleFactor(step));
+            // torch::Tensor mask = cam.getMask(model.getDownscaleFactor(step));
+            torch::Tensor targetImage = cam.getTargetImage(model.getDownscaleFactor(step));
+            // gt = gt.to(device);
+            // mask = mask.to(device);
+            targetImage = targetImage.to(device);
 
-            torch::Tensor mainLoss = model.mainLoss(rgb, gt, ssimWeight, mask);
+            torch::Tensor mainLoss = model.mainLoss(rgb, targetImage, ssimWeight);
             mainLoss.backward();
             
             if (step % displayStep == 0) {
@@ -197,6 +199,17 @@ int main(int argc, char *argv[]){
                     );
                     detached_mask.convertTo(detached_mask, CV_8UC1);
                     cv::imwrite((fs::path(valRender) / (std::to_string(step) + "_mask.png")).string(), detached_mask);
+
+                    torch::Tensor targetImage = valCam->getTargetImage(model.getDownscaleFactor(step));
+                    torch::Tensor targetImageCpu = targetImage.detach().cpu().squeeze(-1) * 255.0f;
+                    cv::Mat detached_target_image(
+                        targetImageCpu.size(0),
+                        targetImageCpu.size(1),
+                        CV_32FC3,
+                        targetImageCpu.data_ptr<float>()
+                    );
+                    detached_target_image.convertTo(detached_target_image, CV_8UC1);
+                    cv::imwrite((fs::path(valRender) / (std::to_string(step) + "_target_image.png")).string(), detached_target_image);
                 }
             }
 
@@ -221,9 +234,10 @@ int main(int argc, char *argv[]){
         // Validate
         if (valCam != nullptr){
             torch::Tensor rgb = model.forward(*valCam, numIters);
-            torch::Tensor gt = valCam->getImage(model.getDownscaleFactor(numIters)).to(device);
-            torch::Tensor mask = valCam->getMask(model.getDownscaleFactor(numIters)).to(device);
-            std::cout << valCam->filePath << " validation loss: " << model.mainLoss(rgb, gt, ssimWeight, mask).item<float>() << std::endl; 
+            // torch::Tensor gt = valCam->getImage(model.getDownscaleFactor(numIters)).to(device);
+            // torch::Tensor mask = valCam->getMask(model.getDownscaleFactor(numIters)).to(device);
+            torch::Tensor targetImage = valCam->getTargetImage(model.getDownscaleFactor(numIters)).to(device);
+            std::cout << valCam->filePath << " validation loss: " << model.mainLoss(rgb, targetImage, ssimWeight).item<float>() << std::endl; 
         }
     }catch(const std::exception &e){
         std::cerr << e.what() << std::endl;
